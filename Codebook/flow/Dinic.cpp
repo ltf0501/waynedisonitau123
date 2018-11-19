@@ -1,49 +1,79 @@
-struct dinic {
-    static const int inf = 1e9;
-    struct edge {
-        int dest, cap, rev;
-        edge(int d, int c, int r): dest(d), cap(c), rev(r) {}
-    };
-    vector<edge> g[maxn];
-    int qu[maxn], ql, qr;
-    int lev[maxn];
-    void init() {
-        for (int i = 0; i < maxn; ++i)
-            g[i].clear();
+struct Edge{
+	int from,to,cap,flow;//起点，终点，容量，流量
+	Edge(){}
+	Edge(int from,int to,int cap,int flow):from(from),to(to),cap(cap),flow(flow){}
+};
+struct Dinic{
+	int n,m,s,t;
+	vector<Edge> edges;
+	vector<int> G[maxn];
+	bool vis[maxn];
+	int d[maxn];
+	int cur[maxn];
+
+	void init(int n)
+    {
+	 	this->n=n;
+	 	for(int i=0;i<n;i++) G[i].clear();
+	 	edges.clear();
     }
-    void add_edge(int a, int b, int c) {
-        g[a].emplace_back(b, c, g[b].size() - 0);
-        g[b].emplace_back(a, 0, g[a].size() - 1);
-    }
-    bool bfs(int s, int t) {
-        memset(lev, -1, sizeof(lev));
-        lev[s] = 0;
-        ql = qr = 0;
-        qu[qr++] = s;
-        while (ql < qr) {
-            int x = qu[ql++];
-            for (edge &e : g[x]) if (lev[e.dest] == -1 && e.cap > 0) {
-                lev[e.dest] = lev[x] + 1;
-                qu[qr++] = e.dest;
-            }
-        }
-        return lev[t] != -1;
-    }
-    int dfs(int x, int t, int flow) {
-        if (x == t) return flow;
-        int res = 0;
-        for (edge &e : g[x]) if (e.cap > 0 && lev[e.dest] == lev[x] + 1) {
-            int f = dfs(e.dest, t, min(e.cap, flow - res));
-            res += f;
-            e.cap -= f;
-            g[e.dest][e.rev].cap += f;
-        }
-        if (res == 0) lev[x] = -1;
-        return res;
-    }
-    int operator()(int s, int t) {
-        int flow = 0;
-        for (; bfs(s, t); flow += dfs(s, t, inf));
-        return flow;
-    }
+	void AddEdge(int from,int to,int cap)
+	{
+		edges.push_back(Edge(from,to,cap,0));
+		edges.push_back(Edge(to,from,0,0));
+		m=edges.size();
+		G[from].push_back(m-2);
+		G[to].push_back(m-1);
+	}
+	bool bfs()
+	{
+		memset(vis,0,sizeof(vis));
+		queue<int> Q;
+		Q.push(s);
+		d[s]=0;
+		vis[s]=1;
+		while(!Q.empty())
+		{
+			int x=Q.front();Q.pop();
+			for(int i=0;i<G[x].size();i++)
+			{
+				Edge& e=edges[G[x][i]];
+				if(!vis[e.to]&&e.cap>e.flow)
+				{
+					vis[e.to]=1;
+					d[e.to]=d[x]+1;
+					Q.push(e.to);
+				}
+			}
+		}
+		return vis[t];
+	}
+	int dfs(int x,int a)
+	{
+		if(x==t || a==0) return a;
+		int flow=0,f;
+		for(int& i=cur[x]; i<G[x].size() ;i++)
+		{
+			Edge& e=edges[G[x][i]];
+			if(d[x]+1==d[e.to]&&(f=dfs(e.to,min(a,e.cap-e.flow)))>0){
+				e.flow+=f;
+				edges[G[x][i]^1].flow-=f;
+				flow+=f;
+				a-=f;
+				if(!a) break;
+			}
+		}
+		return flow;
+	}
+	int Maxflow(int s,int t)
+	{
+		this->s=s,this->t=t;
+		int flow=0;
+		while(bfs())
+		{
+			memset(cur,0,sizeof(cur));
+			flow+=dfs(s,inf);
+		}
+		return flow;
+	}
 };
